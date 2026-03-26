@@ -1,7 +1,5 @@
-// 1. CONFIGURATION
 const DATABASE_URL = "https://concours-de-deguisement-default-rtdb.europe-west1.firebasedatabase.app";
 
-// Identifiant unique du votant
 let voterId = localStorage.getItem('concours_voter_id');
 if (!voterId) {
     voterId = 'voter_' + Math.random().toString(36).substr(2, 9);
@@ -10,20 +8,28 @@ if (!voterId) {
 
 const listeEquipes = document.getElementById('liste-equipes');
 const msgFerme = document.getElementById('message-ferme');
-let sortableInstance = null;
 let equipesChargees = false;
 
-// 2. CHARGEMENT DE LA CONFIG (Équipes + Statut)
-async function chargerConfig() {
+// 1. On charge les équipes UNE SEULE FOIS pour économiser le serveur
+async function chargerEquipesInitiales() {
     try {
-        const response = await fetch(`${DATABASE_URL}/config.json`);
-        const config = await response.json();
+        const response = await fetch(`${DATABASE_URL}/config/equipes.json`);
+        const equipes = await response.json();
+        if (equipes) {
+            genererListeEquipes(equipes);
+            equipesChargees = true;
+        }
+    } catch (e) { console.error("Erreur chargement équipes:", e); }
+}
 
-        if (!config) return;
+// 2. On vérifie le statut (Ouvert/Fermé) moins souvent (toutes les 20 sec)
+async function verifierStatut() {
+    try {
+        const response = await fetch(`${DATABASE_URL}/config/status.json`);
+        const status = await response.json();
 
-        // A. Gestion du Statut (Ouvert/Fermé)
-        if (config.status === 'fermé') {
-            listeEquipes.style.opacity = "0.4";
+        if (status === 'fermé') {
+            listeEquipes.style.opacity = "0.3";
             listeEquipes.style.pointerEvents = "none";
             if(msgFerme) msgFerme.style.display = "block";
         } else {
@@ -31,55 +37,32 @@ async function chargerConfig() {
             listeEquipes.style.pointerEvents = "auto";
             if(msgFerme) msgFerme.style.display = "none";
         }
-
-        // B. Chargement initial des équipes
-        if (!equipesChargees && config.equipes) {
-            genererListeEquipes(config.equipes);
-            equipesChargees = true;
-        }
-    } catch (e) {
-        console.error("Erreur de config:", e);
-    }
+    } catch (e) { console.error("Erreur statut:", e); }
 }
 
 function genererListeEquipes(equipesObj) {
     listeEquipes.innerHTML = '';
-    
-    // On regarde si l'utilisateur a déjà un ordre enregistré localement
     const ordreSauvegarde = JSON.parse(localStorage.getItem('concours_ordre'));
-    let IDsAafficher = Object.keys(equipesObj);
+    let IDs = Object.keys(equipesObj);
 
-    // Si on a un ordre sauvegardé, on trie les IDs selon cet ordre
     if (ordreSauvegarde) {
-        // On ne garde que les IDs qui existent encore dans la base
-        IDsAafficher = ordreSauvegarde.filter(id => equipesObj[id]);
-        // On ajoute les éventuelles nouvelles équipes à la fin
-        Object.keys(equipesObj).forEach(id => {
-            if (!IDsAafficher.includes(id)) IDsAafficher.push(id);
-        });
+        IDs = ordreSauvegarde.filter(id => equipesObj[id]);
+        Object.keys(equipesObj).forEach(id => { if (!IDs.includes(id)) IDs.push(id); });
     }
 
-    IDsAafficher.forEach((id, index) => {
+    IDs.forEach((id, index) => {
         const li = document.createElement('li');
         li.setAttribute('data-id', id);
-        li.innerHTML = `
-            <span class="rank">${index + 1}</span>
-            <span class="name">${equipesObj[id]}</span>
-            <span class="drag-handle">☰</span>
-        `;
+        li.innerHTML = `<span class="rank">${index + 1}</span><span class="name">${equipesObj[id]}</span><span class="drag-handle">☰</span>`;
         listeEquipes.appendChild(li);
     });
-
-    // Activer SortableJS une fois la liste créée
     initSortable();
 }
 
-// 3. DEPLACER ET ENVOYER
 function initSortable() {
-    sortableInstance = new Sortable(listeEquipes, {
+    new Sortable(listeEquipes, {
         animation: 150,
         handle: '.drag-handle',
-        ghostClass: 'sortable-ghost',
         onEnd: mettreAJourClassement
     });
 }
@@ -87,25 +70,20 @@ function initSortable() {
 function mettreAJourClassement() {
     const items = listeEquipes.querySelectorAll('li');
     let nouveauClassement = [];
-
     items.forEach((item, index) => {
         item.querySelector('.rank').innerText = index + 1;
         nouveauClassement.push(item.getAttribute('data-id'));
     });
-
-    // Sauvegarde locale pour l'affichage
     localStorage.setItem('concours_ordre', JSON.stringify(nouveauClassement));
 
-    // Envoi Firebase REST (Zéro limite de connexions)
+    // Envoi par FETCH (Mode "Hit and Run" : pas de connexion persistante)
     fetch(`${DATABASE_URL}/votes/${voterId}.json`, {
         method: 'PUT',
-        body: JSON.stringify({
-            classement: nouveauClassement,
-            heure: Date.now()
-        })
+        body: JSON.stringify({ classement: nouveauClassement, heure: Date.now() })
     });
 }
 
-// Vérifier le statut toutes les 5 secondes (pour bloquer le vote en direct)
-setInterval(chargerConfig, 5000);
-chargerConfig();
+// LANCEMENT
+chargerEquipesInitiales();
+verifierStatut();
+setInterval(verifierStatut, 20000); // 20 secondes suffit largement
