@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Concours ⚙️</title>
+    <!-- On charge Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; display: flex; justify-content: center; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; color: #1e272e; margin-top: 30px; }
+        h2:first-child { margin-top: 0; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s; }
+        .btn-add { background: #2ed573; color: white; margin-top: 5px; }
+        .btn-add:hover { background: #26af5f; }
+        .btn-status { background: #1e90ff; color: white; margin-bottom: 10px; font-size: 1.2em; }
+        .btn-reset { background: #ff4757; color: white; margin-top: 40px; opacity: 0.7; }
+        .btn-reset:hover { opacity: 1; }
+        .equipe-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background: #f9f9f9; margin-bottom: 5px; border-radius: 5px; }
+        .delete { color: #ff4757; cursor: pointer; font-weight: bold; padding: 5px 10px; }
+        .status-badge { display: block; text-align: center; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-weight: bold; }
+        .open { background: #e3fcef; color: #00875a; border: 1px solid #00875a; }
+        .closed { background: #ffebe6; color: #de350b; border: 1px solid #de350b; }
+    </style>
+</head>
+<body>
+
+<div class="card" id="admin-content" style="display:none;">
+    <h2>⚙️ Statut du Vote</h2>
+    <div id="status-badge" class="status-badge">Chargement...</div>
+    <button id="toggle-vote" class="btn-status">Charger...</button>
+
+    <h2>👥 Équipes au concours</h2>
+    <div id="liste-admin"> <!-- Rempli par JS --> </div>
+    
+    <div style="margin-top:20px;">
+        <input type="text" id="nom-equipe" placeholder="Nom de l'équipe (ex: 🏴‍☠️ Pirates)">
+        <button class="btn-add" onclick="ajouterEquipe()">＋ Ajouter l'équipe</button>
+    </div>
+
+    <button class="btn-reset" onclick="reinitialiserVotes()">🔥 Réinitialiser tous les votes</button>
+</div>
+
+<script>
+    // --- TA CONFIGURATION ---
+    const firebaseConfig = {
+        databaseURL: "https://concours-de-deguisement-default-rtdb.europe-west1.firebasedatabase.app"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- SÉCURITÉ MOT DE PASSE ---
+    const pass = prompt("Mot de passe admin :");
+    if(pass === "1234") { // <--- TON MOT DE PASSE EST ICI
+        document.getElementById('admin-content').style.display = 'block';
+    } else {
+        alert("Accès refusé");
+        document.body.innerHTML = "<h1>🔒 Accès verrouillé</h1>";
+    }
+
+    // --- ÉCOUTE DE LA CONFIG ---
+    db.ref('config').on('value', (snapshot) => {
+        const config = snapshot.val() || { status: 'fermé', equipes: {} };
+        
+        // Mise à jour du badge statut
+        const badge = document.getElementById('status-badge');
+        const btnStatus = document.getElementById('toggle-vote');
+        
+        if (config.status === 'ouvert') {
+            badge.className = "status-badge open";
+            badge.innerText = "LE VOTE EST OUVERT";
+            btnStatus.innerText = "FERMER LES VOTES";
+            btnStatus.style.background = "#ff4757";
+        } else {
+            badge.className = "status-badge closed";
+            badge.innerText = "LE VOTE EST FERMÉ";
+            btnStatus.innerText = "OUVRIR LES VOTES";
+            btnStatus.style.background = "#2ed573";
+        }
+
+        // Mise à jour de la liste des équipes
+        const listeDiv = document.getElementById('liste-admin');
+        listeDiv.innerHTML = '';
+        const equipes = config.equipes || {};
+        
+        if (Object.keys(equipes).length === 0) {
+            listeDiv.innerHTML = "<p style='color:gray;text-align:center;'>Aucune équipe pour le moment.</p>";
+        }
+
+        for(let id in equipes) {
+            listeDiv.innerHTML += `
+                <div class="equipe-item">
+                    <span>${equipes[id]}</span>
+                    <span class="delete" onclick="supprimerEquipe('${id}')">Supprimer</span>
+                </div>
+            `;
+        }
+    });
+
+    // --- FONCTIONS ACTIONS ---
+    function ajouterEquipe() {
+        const nom = document.getElementById('nom-equipe').value;
+        if(!nom) return;
+        const id = "eq_" + Date.now();
+        db.ref('config/equipes/' + id).set(nom)
+          .then(() => { document.getElementById('nom-equipe').value = ''; })
+          .catch(err => alert("Erreur : Vérifie les règles de ta base Firebase !"));
+    }
+
+    function supprimerEquipe(id) {
+        if(confirm("Supprimer cette équipe ?")) {
+            db.ref('config/equipes/' + id).remove();
+        }
+    }
+
+    document.getElementById('toggle-vote').onclick = () => {
+        db.ref('config/status').once('value', (snap) => {
+            const actuel = snap.val();
+            db.ref('config/status').set(actuel === 'ouvert' ? 'fermé' : 'ouvert');
+        });
+    };
+
+    function reinitialiserVotes() {
+        if(confirm("🚨 ATTENTION : Tu vas supprimer TOUS les votes reçus jusqu'ici. Es-tu sûr ?")) {
+            db.ref('votes').remove();
+            alert("Base de votes vidée !");
+        }
+    }
+</script>
+</body>
+</html>

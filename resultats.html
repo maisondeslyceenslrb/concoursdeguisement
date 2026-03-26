@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>CLASSEMENT EN DIRECT 🏆</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #1a1a2e;
+            color: white;
+            margin: 0; padding: 40px;
+            text-align: center; overflow: hidden;
+        }
+        h1 { font-size: 3.5em; color: #f1c40f; text-shadow: 0 4px 10px rgba(0,0,0,0.5); margin-bottom: 10px; }
+        #nb-votes { color: #48dbfb; font-size: 1.2em; margin-bottom: 30px; }
+        .container { max-width: 900px; margin: auto; }
+        
+        .barre-equipe {
+            background: rgba(255,255,255,0.1);
+            margin: 15px 0;
+            padding: 15px 25px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            font-size: 2.2em;
+            font-weight: bold;
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            border-left: 10px solid #54a0ff;
+        }
+
+        /* Top 3 styles */
+        .barre-equipe:nth-child(1) { background: #f1c40f; color: #1a1a2e; transform: scale(1.05); border-left: none; }
+        .barre-equipe:nth-child(2) { background: #bdc3c7; color: #1a1a2e; border-left: none; }
+        .barre-equipe:nth-child(3) { background: #cd7f32; color: white; border-left: none; }
+
+        .nom { flex-grow: 1; text-align: left; margin-left: 20px; }
+        .points { font-family: monospace; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+    <h1>🏆 CLASSEMENT LIVE</h1>
+    <div id="nb-votes">Chargement des données...</div>
+
+    <div class="container" id="classement-ui">
+        <!-- Les barres s'afficheront ici -->
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://concours-de-deguisement-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let nomsEquipes = {};
+
+        // 1. Écouter les noms des équipes
+        db.ref('config/equipes').on('value', (snap) => {
+            nomsEquipes = snap.val() || {};
+            calculerEtAfficher();
+        });
+
+        // 2. Écouter les votes
+        db.ref('votes').on('value', (snap) => {
+            const votes = snap.val() || {};
+            calculerEtAfficher(votes);
+        });
+
+        function calculerEtAfficher(votes = {}) {
+            // S'il n'y a pas encore de votes, on récupère via la DB directement
+            if(Object.keys(votes).length === 0) {
+                db.ref('votes').once('value', s => { if(s.val()) innerCalcul(s.val()); });
+            } else {
+                innerCalcul(votes);
+            }
+        }
+
+        function innerCalcul(votes) {
+            let scores = {};
+            let nbTotal = 0;
+            
+            // Initialiser les scores
+            Object.keys(nomsEquipes).forEach(id => scores[id] = 0);
+
+            // Calculer les points
+            for (let vId in votes) {
+                nbTotal++;
+                let tri = votes[vId].classement;
+                let ptsMax = Object.keys(nomsEquipes).length;
+                tri.forEach((eqId, index) => {
+                    if(scores[eqId] !== undefined) {
+                        scores[eqId] += (ptsMax - index);
+                    }
+                });
+            }
+
+            document.getElementById('nb-votes').innerText = nbTotal + " participants ont voté";
+
+            // Trier pour l'affichage
+            let triable = Object.keys(scores).map(id => ({ id, pts: scores[id] }));
+            triable.sort((a, b) => b.pts - a.pts);
+
+            const ui = document.getElementById('classement-ui');
+            ui.innerHTML = '';
+            triable.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'barre-equipe';
+                div.innerHTML = `
+                    <span>#${index+1}</span>
+                    <span class="nom">${nomsEquipes[item.id] || "Ancienne équipe"}</span>
+                    <span class="points">${item.pts} <small style="font-size:0.4em">pts</small></span>
+                `;
+                ui.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
