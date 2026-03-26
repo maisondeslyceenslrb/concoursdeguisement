@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin - Concours ⚙️</title>
-    <!-- On charge Firebase -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -33,7 +33,7 @@
     <button id="toggle-vote" class="btn-status">Charger...</button>
 
     <h2>👥 Équipes au concours</h2>
-    <div id="liste-admin"> <!-- Rempli par JS --> </div>
+    <div id="liste-admin"> <!-- Rempli par le script JS --> </div>
     
     <div style="margin-top:20px;">
         <input type="text" id="nom-equipe" placeholder="Nom de l'équipe (ex: 🏴‍☠️ Pirates)">
@@ -44,7 +44,7 @@
 </div>
 
 <script>
-    // --- TA CONFIGURATION ---
+
     const firebaseConfig = {
         databaseURL: "https://concours-de-deguisement-default-rtdb.europe-west1.firebasedatabase.app"
     };
@@ -61,11 +61,11 @@
         document.body.innerHTML = "<h1>🔒 Accès verrouillé</h1>";
     }
 
-    // --- ÉCOUTE DE LA CONFIG ---
+    // --- RECUP DE LA CONFIG ---
     db.ref('config').on('value', (snapshot) => {
         const config = snapshot.val() || { status: 'fermé', equipes: {} };
         
-        // Mise à jour du badge statut
+        // Mise à jour du "badge" statut
         const badge = document.getElementById('status-badge');
         const btnStatus = document.getElementById('toggle-vote');
         
@@ -107,7 +107,7 @@
         const id = "eq_" + Date.now();
         db.ref('config/equipes/' + id).set(nom)
           .then(() => { document.getElementById('nom-equipe').value = ''; })
-          .catch(err => alert("Erreur : Vérifie les règles de ta base Firebase !"));
+          .catch(err => alert("Erreur : Vérifie les règles de la base !"));
     }
 
     function supprimerEquipe(id) {

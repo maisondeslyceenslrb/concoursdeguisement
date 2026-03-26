@@ -30,7 +30,6 @@
             border-left: 10px solid #54a0ff;
         }
 
-        /* Top 3 styles */
         .barre-equipe:nth-child(1) { background: #f1c40f; color: #1a1a2e; transform: scale(1.05); border-left: none; }
         .barre-equipe:nth-child(2) { background: #bdc3c7; color: #1a1a2e; border-left: none; }
         .barre-equipe:nth-child(3) { background: #cd7f32; color: white; border-left: none; }
@@ -45,7 +44,7 @@
     <div id="nb-votes">Chargement des données...</div>
 
     <div class="container" id="classement-ui">
-        <!-- Les barres s'afficheront ici -->
+        <!-- Les barres s'afficheront ici automatiquement...-->
     </div>
 
     <script>
@@ -57,13 +56,13 @@
 
         let nomsEquipes = {};
 
-        // 1. Écouter les noms des équipes
+        // 1. Recuperer les noms des équipes
         db.ref('config/equipes').on('value', (snap) => {
             nomsEquipes = snap.val() || {};
             calculerEtAfficher();
         });
 
-        // 2. Écouter les votes
+        // 2. Recuperer les votes
         db.ref('votes').on('value', (snap) => {
             const votes = snap.val() || {};
             calculerEtAfficher(votes);

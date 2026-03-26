@@ -1,6 +1,4 @@
-// ==========================================
 // 1. CONFIGURATION
-// ==========================================
 const DATABASE_URL = "https://concours-de-deguisement-default-rtdb.europe-west1.firebasedatabase.app";
 
 // Identifiant unique du votant
@@ -15,9 +13,7 @@ const msgFerme = document.getElementById('message-ferme');
 let sortableInstance = null;
 let equipesChargees = false;
 
-// ==========================================
 // 2. CHARGEMENT DE LA CONFIG (Équipes + Statut)
-// ==========================================
 async function chargerConfig() {
     try {
         const response = await fetch(`${DATABASE_URL}/config.json`);
@@ -78,9 +74,7 @@ function genererListeEquipes(equipesObj) {
     initSortable();
 }
 
-// ==========================================
-// 3. DRAG & DROP ET ENVOI
-// ==========================================
+// 3. DEPLACER ET ENVOYER
 function initSortable() {
     sortableInstance = new Sortable(listeEquipes, {
         animation: 150,
@@ -99,7 +93,7 @@ function mettreAJourClassement() {
         nouveauClassement.push(item.getAttribute('data-id'));
     });
 
-    // Sauvegarde locale
+    // Sauvegarde locale pour l'affichage
     localStorage.setItem('concours_ordre', JSON.stringify(nouveauClassement));
 
     // Envoi Firebase REST (Zéro limite de connexions)
