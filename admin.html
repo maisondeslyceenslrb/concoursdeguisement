@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Concours ⚙️</title>
+    <title>⚙️ Admin - Concours ⚙️</title>
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -28,7 +28,7 @@
 <body>
 
 <div class="card" id="admin-content" style="display:none;">
-    <h2>⚙️ Statut du Vote</h2>
+    <h2>⚙️ Statut du Vote ⚙️</h2>
     <div id="status-badge" class="status-badge">Chargement...</div>
     <button id="toggle-vote" class="btn-status">Charger...</button>
 
@@ -54,7 +54,7 @@
 
     // --- SÉCURITÉ MOT DE PASSE ---
     const pass = prompt("Mot de passe admin :");
-    if(pass === "1234") { // <--- TON MOT DE PASSE EST ICI
+    if(pass === "1234") { // <--- LE MOT DE PASSE EST ICI
         document.getElementById('admin-content').style.display = 'block';
     } else {
         alert("Accès refusé");

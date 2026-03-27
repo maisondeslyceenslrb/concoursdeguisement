@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>CLASSEMENT EN DIRECT 🏆</title>
+    <title>🏆 CLASSEMENT EN DIRECT 🏆</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -40,7 +40,7 @@
 </head>
 <body>
 
-    <h1>🏆 CLASSEMENT LIVE</h1>
+    <h1>🏆 CLASSEMENT EN LIVE 🏆</h1>
     <div id="nb-votes">Chargement des données...</div>
 
     <div class="container" id="classement-ui">
@@ -69,7 +69,7 @@
         });
 
         function calculerEtAfficher(votes = {}) {
-            // S'il n'y a pas encore de votes, on récupère via la DB directement
+            // S'il n'y a pas encore de votes, on récupère via la base de données directement
             if(Object.keys(votes).length === 0) {
                 db.ref('votes').once('value', s => { if(s.val()) innerCalcul(s.val()); });
             } else {
